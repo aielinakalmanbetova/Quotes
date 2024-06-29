@@ -1,64 +1,80 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import axios from 'axios';
-import Quote from '../../components/Quote/Quote';
+import axiosApi from '../../axiosApi';
 
 interface Quote {
   id: string;
+  category: string;
   author: string;
   text: string;
-  category: string;
 }
+
 const Home: React.FC = () => {
-  const { id } = useParams();
+  const { category } = useParams();
   const [quotes, setQuotes] = useState<Quote[]>([]);
 
   useEffect(() => {
     const fetchQuotes = async () => {
       try {
         let url = '/block.json';
-        if (id && id !== 'all') {
-          url += `?orderBy="category"&equalTo="${id}"`;
+        if (category && category !== 'all') {
+          url += `?orderBy="category"&equalTo="${category}"`;
         }
-        const response = await axios.get(url);
+        const response = await axiosApi.get(url);
         if (response.data) {
-          const fetchQuotes: Quote[] = Object.keys(response.data).map(key => ({
+          const fetchedQuotes: Quote[] = Object.keys(response.data).map(key => ({
             id: key,
             ...response.data[key],
           }));
-          setQuotes(fetchQuotes);
+          setQuotes(fetchedQuotes);
         }
       } catch (error) {
-        console.error('Error', error)
+        console.error('Error fetching quotes:', error);
       }
     };
-    fetchQuotes()
-  }, [id]);
+    fetchQuotes();
+  }, [category]);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await axiosApi.delete(`/block/${id}.json`);
+      const updatedQuotes = quotes.filter(quote => quote.id !== id);
+      setQuotes(updatedQuotes);
+      console.log('Quote deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting quote:', error);
+    }
+  };
 
   return (
-    <>
-      <div className="container d-flex w-50">
+    <div className="container w-50 d-flex justify-content-between">
+      <header className="pt-4">
         <ul>
-          <li><Link to="/">All</Link></li>
-          <li><Link to="/">Star Wars</Link></li>
-          <li><Link to="/">Famous People</Link></li>
-          <li><Link to="/">Saying</Link></li>
-          <li><Link to="/">Humour</Link></li>
-          <li><Link to="/">Motivation</Link></li>
+          <li><Link to="/quotes/all">All</Link></li>
+          <li><Link to="/quotes/star-wars">Star Wars</Link></li>
+          <li><Link to="/quotes/famous-people">Famous People</Link></li>
+          <li><Link to="/quotes/saying">Saying</Link></li>
+          <li><Link to="/quotes/humour">Humour</Link></li>
+          <li><Link to="/quotes/motivational">Motivation</Link></li>
         </ul>
-        <div className="col-md-4">
-          <p>All</p>
-          <Quote quotes={quotes} />
-          <h3>Популярные цитаты</h3>
-        </div>
+      </header>
+      <div className="pt-3 w-50">
+        <ul className="list-group">
+          {quotes.map(quote => (
+            <li key={quote.id} className="list-group-item">
+              <p>{quote.text}</p>
+              <p>Author: {quote.author}</p>
+              <p>Category: {quote.category}</p>
+              <div className="actions">
+                <Link to={`/quotes/${quote.id}/edit`}>Edit</Link>
+                <button type="button" className="btn-close text-end" aria-label="Close"
+                        onClick={() => handleDelete(quote.id)}></button>
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
-      <div className="container">
-      <div className="row">
-
-        </div>
-      </div>
-    </>
-
+    </div>
   );
 };
 
